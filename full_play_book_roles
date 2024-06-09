@@ -1,0 +1,67 @@
+- name: Setup environment and install packages
+  hosts: localhost
+  become: yes
+  pre_tasks:
+    - name: Pre-tasks - Update package cache (YUM)
+      yum:
+        name: '*'
+        state: latest
+      when: ansible_pkg_mgr == 'yum'
+
+    - name: Pre-tasks - Update package cache (APT)
+      apt:
+        update_cache: yes
+      when: ansible_pkg_mgr == 'apt'
+
+  tasks:
+    - name: Create directory
+      file:
+        path: "~/example_directory"
+        state: directory
+        mode: '0755'
+
+    - name: Create file and add text
+      copy:
+        dest: "~/example_directory/example_file.txt"
+        content: |
+          This is some text in the file.
+        mode: '0644'
+
+    - name: Add a line to the file
+      lineinfile:
+        path: "~/example_directory/example_file.txt"
+        line: 'This is another line added to the file.'
+        insertafter: EOF
+
+    - name: Create a user
+      user:
+        name: john
+        state: present
+        shell: /bin/bash
+
+    - name: Create a group
+      group:
+        name: developers
+        state: present
+
+    - name: Assign user to group
+      user:
+        name: john
+        groups: developers
+        append: yes
+
+    - name: Fetch a remote file
+      get_url:
+        url: https://www.free-css.com/assets/files/free-css-templates/download/page293/fitapp.zip
+        dest: "~/example_directory/somefile.txt"
+
+    - name: Install required packages
+      package:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - tree
+        - git
+        - elinks
+        - unzip
+        - wget
