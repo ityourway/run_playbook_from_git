@@ -1,0 +1,68 @@
+# deploy_html_app.yml
+- name: Deploy HTML Application
+  hosts: localhost
+  become: yes
+  tasks:
+    - name: Ensure Nginx is installed and running
+      package:
+        name: nginx
+        state: present
+      notify: Restart Nginx
+
+    - name: Ensure /var/www/html directory exists
+      file:
+        path: /var/www/html
+        state: directory
+        owner: nginx
+        group: nginx
+        mode: '0755'
+
+    - name: Deploy index.html
+      copy:
+        src: "files/index.html"
+        dest: "/var/www/html/index.html"
+
+    - name: Deploy styles.css
+      copy:
+        src: "files/styles.css"
+        dest: "/var/www/html/styles.css"
+
+    - name: Deploy script.js
+      copy:
+        src: "files/script.js"
+        dest: "/var/www/html/script.js"
+
+    - name: Set permissions for HTML files
+      file:
+        path: "{{ item }}"
+        owner: nginx
+        group: nginx
+        mode: '0644'
+      loop:
+        - "/var/www/html/index.html"
+        - "/var/www/html/styles.css"
+        - "/var/www/html/script.js"
+
+    - name: Add HTML content to index.html
+      lineinfile:
+        path: "/var/www/html/index.html"
+        line: |
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+              <meta charset="UTF-8">
+              <title>My HTML App</title>
+              <link rel="stylesheet" href="styles.css">
+          </head>
+          <body>
+              <h1>Hello, World!</h1>
+              <script src="script.js"></script>
+          </body>
+          </html>
+        create: yes
+
+  handlers:
+    - name: Restart Nginx
+      service:
+        name: nginx
+        state: restarted
