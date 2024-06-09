@@ -1,4 +1,4 @@
-
+---
 - name: Full System Configuration
   hosts: all
   become: yes
@@ -10,13 +10,8 @@
       - unzip
       - wget
 
-    RedHat_packages:
-      - httpd
-      - "{{ common_packages }}"
-
-    Debian_packages:
-      - apache2
-      - "{{ common_packages }}"
+    RedHat_packages: "{{ common_packages + ['httpd'] }}"
+    Debian_packages: "{{ common_packages + ['apache2'] }}"
 
   pre_tasks:
     - name: Perform pre-tasks
