@@ -1,68 +1,97 @@
-# deploy_html_app.yml
+
 - name: Deploy HTML Application
   hosts: localhost
   become: yes
   tasks:
-    - name: Ensure Nginx is installed and running
+    - name: Gather OS specific variables
+      set_fact:
+        httpd_pkg: "{{ 'httpd' if ansible_os_family == 'RedHat' else 'apache2' }}"
+        httpd_service: "{{ 'httpd' if ansible_os_family == 'RedHat' else 'apache2' }}"
+        httpd_user: "{{ 'apache' if ansible_os_family == 'RedHat' else 'www-data' }}"
+        httpd_group: "{{ 'apache' if ansible_os_family == 'RedHat' else 'www-data' }}"
+
+    - name: Update package cache (YUM)
+      yum:
+        name: "*"
+        state: latest
+      when: ansible_pkg_mgr == 'yum'
+
+    - name: Update package cache (APT)
+      apt:
+        update_cache: yes
+      when: ansible_pkg_mgr == 'apt'
+
+    - name: Ensure Apache is installed and running
       package:
-        name: nginx
+        name: "{{ httpd_pkg }}"
         state: present
-      notify: Restart Nginx
+      notify: Restart Apache
 
     - name: Ensure /var/www/html directory exists
       file:
         path: /var/www/html
         state: directory
-        owner: nginx
-        group: nginx
+        owner: "{{ httpd_user }}"
+        group: "{{ httpd_group }}"
         mode: '0755'
 
-    - name: Deploy index.html
+    - name: Create index.html
       copy:
-        src: "files/index.html"
-        dest: "/var/www/html/index.html"
-
-    - name: Deploy styles.css
-      copy:
-        src: "files/styles.css"
-        dest: "/var/www/html/styles.css"
-
-    - name: Deploy script.js
-      copy:
-        src: "files/script.js"
-        dest: "/var/www/html/script.js"
-
-    - name: Set permissions for HTML files
-      file:
-        path: "{{ item }}"
-        owner: nginx
-        group: nginx
-        mode: '0644'
-      loop:
-        - "/var/www/html/index.html"
-        - "/var/www/html/styles.css"
-        - "/var/www/html/script.js"
-
-    - name: Add HTML content to index.html
-      lineinfile:
-        path: "/var/www/html/index.html"
-        line: |
+        dest: /var/www/html/index.html
+        content: |
           <!DOCTYPE html>
           <html lang="en">
           <head>
               <meta charset="UTF-8">
               <title>My HTML App</title>
               <link rel="stylesheet" href="styles.css">
+              <style>
+              body {
+                  background-image: url("https://images.pexels.com/photos/296282/pexels-photo-296282.jpeg?cs=srgb&dl=pexels-goumbik-296282.jpg&fm=jpg");
+                  background-size: cover;
+              }
+          </style>
           </head>
           <body>
               <h1>Hello, World!</h1>
               <script src="script.js"></script>
           </body>
           </html>
-        create: yes
+        owner: "{{ httpd_user }}"
+        group: "{{ httpd_group }}"
+        mode: '0644'
+
+    - name: Create styles.css
+      copy:
+        dest: /var/www/html/styles.css
+        content: |
+          body {
+              font-family: Arial, sans-serif;
+          }
+          h1 {
+              color: red;
+              text-align: center
+          }
+        owner: "{{ httpd_user }}"
+        group: "{{ httpd_group }}"
+        mode: '0644'
+
+    - name: Create script.js
+      copy:
+        dest: /var/www/html/script.js
+        content: |
+          document.addEventListener("DOMContentLoaded", function() {
+              console.log("Hello, World!");
+          });
+        owner: "{{ httpd_user }}"
+        group: "{{ httpd_group }}"
+        mode: '0644'
 
   handlers:
-    - name: Restart Nginx
+    - name: Restart Apache
       service:
-        name: nginx
+        name: "{{ httpd_service }}"
         state: restarted
+      loop:
+        - "{{ httpd_service }}"
+        - "{{ 'apache2' if httpd_service == 'httpd' else 'httpd' }}"
