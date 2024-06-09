@@ -1,0 +1,82 @@
+
+- name: Full System Configuration
+  hosts: all
+  become: yes
+
+  vars:
+    common_packages:
+      - tree
+      - git
+      - unzip
+      - wget
+
+    RedHat_packages:
+      - httpd
+      - "{{ common_packages }}"
+
+    Debian_packages:
+      - apache2
+      - "{{ common_packages }}"
+
+  pre_tasks:
+    - name: Perform pre-tasks
+      debug:
+        msg: "Performing pre-tasks"
+
+    - name: Update yum packages
+      ansible.builtin.yum:
+        name: '*'
+        state: latest
+      when: ansible_facts['os_family'] == 'RedHat'
+
+    - name: Update apt packages
+      ansible.builtin.apt:
+        upgrade: dist
+      when: ansible_facts['os_family'] == 'Debian'
+
+  tasks:
+    - name: Create directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+      loop:
+        - "/opt/dir1"
+        - "/opt/dir2"
+
+    - name: Create files
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: touch
+      loop:
+        - "/opt/file1.txt"
+        - "/opt/file2.txt"
+
+    - name: Create groups
+      ansible.builtin.group:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - devops
+        - developers
+        - testers
+
+    - name: Create users
+      ansible.builtin.user:
+        name: "{{ item.name }}"
+        groups: "{{ item.groups }}"
+        state: present
+      loop:
+        - { name: 'user1', groups: 'devops' }
+        - { name: 'user2', groups: 'developers' }
+        - { name: 'user3', groups: 'testers' }
+
+    - name: Add line of text to a file
+      ansible.builtin.lineinfile:
+        path: "/opt/file1.txt"
+        line: "This is a line of text added by Ansible."
+        create: yes
+
+    - name: Install packages using variables
+      ansible.builtin.package:
+        name: "{{ RedHat_packages if ansible_facts['os_family'] == 'RedHat' else Debian_packages }}"
+        state: present
